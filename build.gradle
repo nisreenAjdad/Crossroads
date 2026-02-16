@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'com.example'
+version = '0.1.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.3'
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
+}
+
+application {
+    mainClass.set('com.example.App')
+}
+
+// Use the built-in Gradle `wrapper` task from the Gradle distribution to generate
+// wrapper scripts when needed (example: `gradle wrapper --gradle-version 8.6`).
