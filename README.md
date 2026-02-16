@@ -1,29 +1,76 @@
 # Crossroads
-A simulation project is to practice Gen-AI skills.
 
-**Requirements**
-- **Java:** Java 21 (the Gradle Java toolchain in `build.gradle` requests Java 21).
+A traffic-light simulation project to practice Gen-AI skills. This application demonstrates a basic traffic control system at a crossroad with three main components.
 
-- **Gradle wrapper (required/recommended):** This project expects the Gradle wrapper to be present for reproducible builds. The wrapper consists of `gradlew`/`gradlew.bat` and the `gradle/wrapper/*` files.
+## Application Overview
 
-Quick start
+This project provides a foundational environment for experimenting with traffic-control strategies at a single crossroad intersection. It consists of three main components:
 
-- **Build and run (PowerShell, using the wrapper):**
+- **Simple Traffic Generator** (`traffic` package)  
+  Simulates vehicles approaching the intersection from random directions at random intervals, mimicking real-world traffic patterns.
+
+- **Basic Traffic Light Control Algorithm** (`controller` package)  
+  A clock-driven controller that switches lights on a fixed schedule without considering traffic sensor data. This provides a baseline to improve upon.
+
+- **Results Visualization on a Map** (`viz` package)  
+  Displays simulation state including vehicle positions and light states in a simple text-based map view.
+
+## Project Structure
+
+```
+src/main/java/com/example/
+├── App.java                    # Main entry point; runs simulation demo
+├── traffic/
+│   ├── Vehicle.java            # Represents a vehicle
+│   └── TrafficGenerator.java    # Generates and moves vehicles
+├── controller/
+│   └── TrafficLightController.java  # Manages traffic light states
+└── viz/
+    └── SimulationVisualizer.java    # Renders simulation state
+
+src/test/java/com/example/
+├── traffic/
+│   ├── VehicleTest.java
+│   └── TrafficGeneratorTest.java
+├── controller/
+│   └── TrafficLightControllerTest.java
+└── viz/
+    └── SimulationVisualizerTest.java
+```
+
+## Requirements
+
+- **Java:** Java 21 (configured in `build.gradle`)
+- **Gradle wrapper:** Required for reproducible builds. The wrapper files (`gradlew`, `gradlew.bat`, and `gradle/wrapper/*`) enable running builds without installing Gradle system-wide.
+
+## Quick Start
+
+### Build the project
 
 ```powershell
 .\gradlew build
+```
+
+### Run the simulation
+
+```powershell
 .\gradlew run
 ```
 
-- **Run tests (PowerShell):**
+This runs a 10-step simulation showing:
+- Vehicle generation from each direction
+- Traffic light state transitions (North/South → East/West → repeat)
+- Vehicle movement along each approach
+- Real-time visualization of the crossroad state
+
+### Run tests
 
 ```powershell
 .\gradlew test
 ```
 
 
-Notes
-- The repository includes a minimal `App` class at `src/main/java/com/example/App.java` and a JUnit 5 test at `src/test/java/com/example/AppTest.java`.
+
 
 
 
