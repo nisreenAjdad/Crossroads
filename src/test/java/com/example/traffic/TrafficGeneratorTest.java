@@ -34,7 +34,7 @@ public class TrafficGeneratorTest {
             v.setPosition(initialPos);
 
             gen.updateVehicles();
-            // Vehicle should move forward by 2.0 units
+            // Vehicle should move forward by 2.0 units per tick
             assertEquals(initialPos + 2.0, v.getPosition(), 0.01);
         }
     }

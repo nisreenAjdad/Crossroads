@@ -11,6 +11,7 @@ import java.awt.*;
 public class CrossroadVisualizer extends JFrame {
     private static final int WINDOW_WIDTH = 900;
     private static final int WINDOW_HEIGHT = 800;
+    private static final double MIN_VEHICLE_GAP = 25.0;
 
     private TrafficGenerator generator;
     private TrafficLightController controller;
@@ -31,8 +32,8 @@ public class CrossroadVisualizer extends JFrame {
         setResizable(false);
 
         // Initialize simulation components
-        generator = new TrafficGenerator(2.5);
-        controller = new TrafficLightController(20);
+        generator = new TrafficGenerator(0.25);  // Less dense traffic by default
+        controller = new TrafficLightController(850); // 850 units per full cycle: 425 N/S (225 green + 100 yellow + 100 all-red) + 425 E/W
 
         // Main panel
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -64,38 +65,27 @@ public class CrossroadVisualizer extends JFrame {
     }
 
     private void startSimulation() {
-        animationTimer = new Timer(50, e -> {
+        animationTimer = new Timer(200, e -> {
             updateSimulation();
-            canvas.updateSimulation(generator.getVehicles(), controller);
-            updateStats();
         });
         animationTimer.start();
     }
 
     private void updateSimulation() {
-        // Generate new vehicles
         generator.generateVehicles();
-
-        // Update controller
         controller.update();
-
-        // Move vehicles
         generator.updateVehicles();
 
-        // Stop vehicles at red lights (simple logic)
-        for (var vehicle : generator.getVehicles()) {
-            if (controller.getLight(vehicle.getDirection()) == TrafficLightController.LightState.RED) {
-                if (vehicle.getPosition() >= 80) {
-                    vehicle.setStopped(true);
-                }
-            } else {
-                vehicle.setStopped(false);
-            }
-        }
+        // Snapshot vehicles for consistent rendering + stats in this frame
+        java.util.List<com.example.traffic.Vehicle> vehiclesSnapshot = generator.getVehicles();
+        applyTrafficRules(vehiclesSnapshot);
+
+        canvas.updateSimulation(vehiclesSnapshot, controller);
+        updateStats(vehiclesSnapshot);
     }
 
-    private void updateStats() {
-        int vehicleCount = generator.getVehicles().size();
+    private void updateStats(java.util.List<com.example.traffic.Vehicle> vehiclesSnapshot) {
+        int vehicleCount = vehiclesSnapshot.size();
         String northLight = controller.getLight("North").toString();
         String southLight = controller.getLight("South").toString();
         String eastLight = controller.getLight("East").toString();
@@ -107,6 +97,52 @@ public class CrossroadVisualizer extends JFrame {
                 northLight, southLight, eastLight, westLight
         );
         statsLabel.setText(stats);
+    }
+
+    private void applyTrafficRules(java.util.List<com.example.traffic.Vehicle> vehiclesSnapshot) {
+        java.util.Map<String, java.util.List<com.example.traffic.Vehicle>> byDirectionLane = new java.util.HashMap<>();
+        for (String dir : new String[]{"North", "South", "East", "West"}) {
+            for (int lane = 0; lane < 2; lane++) {
+                byDirectionLane.put(dir + "-" + lane, new java.util.ArrayList<>());
+            }
+        }
+
+        for (var vehicle : vehiclesSnapshot) {
+            String key = vehicle.getDirection() + "-" + vehicle.getLane();
+            byDirectionLane.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(vehicle);
+        }
+
+        for (var entry : byDirectionLane.entrySet()) {
+            var dirVehicles = entry.getValue();
+            dirVehicles.sort(java.util.Comparator.comparingDouble(com.example.traffic.Vehicle::getPosition).reversed());
+
+            com.example.traffic.Vehicle previous = null;
+            for (var vehicle : dirVehicles) {
+                boolean beforeIntersection = vehicle.getPosition() < com.example.traffic.Vehicle.getIntersectionStart();
+                boolean inIntersection = vehicle.getPosition() >= com.example.traffic.Vehicle.getIntersectionStart()
+                        && vehicle.getPosition() <= com.example.traffic.Vehicle.getIntersectionEnd();
+                boolean vehicleAhead = previous != null && (previous.getPosition() - vehicle.getPosition()) < MIN_VEHICLE_GAP;
+
+                TrafficLightController.LightState light = controller.getLight(vehicle.getDirection());
+                boolean shouldStop;
+                if (vehicleAhead && beforeIntersection) {
+                    shouldStop = true;
+                } else if (light == TrafficLightController.LightState.RED && beforeIntersection) {
+                    shouldStop = true;
+                } else if (light == TrafficLightController.LightState.YELLOW && beforeIntersection) {
+                    shouldStop = true;
+                } else {
+                    shouldStop = false;
+                }
+
+                if (inIntersection) {
+                    shouldStop = false; // always clear the intersection once entered
+                }
+
+                vehicle.setStopped(shouldStop);
+                previous = vehicle;
+            }
+        }
     }
 
     public static void main(String[] args) {

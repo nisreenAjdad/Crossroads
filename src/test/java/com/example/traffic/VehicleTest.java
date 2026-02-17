@@ -8,7 +8,7 @@ public class VehicleTest {
     void vehicleCreation() {
         Vehicle v = new Vehicle("North");
         assertEquals("North", v.getDirection());
-        assertEquals(0.0, v.getPosition());
+        assertEquals(Vehicle.getStartPosition(), v.getPosition());
         assertFalse(v.isStopped());
     }
 
@@ -20,13 +20,13 @@ public class VehicleTest {
     }
 
     @Test
-    void vehiclePositionBounded() {
+    void vehiclePositionUnbounded() {
         Vehicle v = new Vehicle("West");
-        v.setPosition(150); // exceeds max
-        assertEquals(100.0, v.getPosition());
+        v.setPosition(150); // exceeds previous max
+        assertEquals(150.0, v.getPosition());
 
-        v.setPosition(-10); // below min
-        assertEquals(0.0, v.getPosition());
+        v.setPosition(-100); // negative allowed (off-screen approach)
+        assertEquals(-100.0, v.getPosition());
     }
 
     @Test

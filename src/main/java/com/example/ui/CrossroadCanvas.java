@@ -13,11 +13,12 @@ import java.util.HashMap;
  * Draws vehicles as rectangles and traffic lights as circles.
  */
 public class CrossroadCanvas extends JPanel {
-    private static final int ROAD_WIDTH = 60;
+    private static final int ROAD_WIDTH = 100;
     private static final int INTERSECTION_SIZE = 150;
     private static final int VEHICLE_WIDTH = 30;
     private static final int VEHICLE_HEIGHT = 20;
     private static final int LIGHT_RADIUS = 15;
+    private static final int EDGE_BUFFER = 200;
 
     private List<Vehicle> vehicles;
     private TrafficLightController controller;
@@ -62,17 +63,31 @@ public class CrossroadCanvas extends JPanel {
 
         // North road
         g.fillRect(centerX - ROAD_WIDTH / 2, 0, ROAD_WIDTH, centerY - INTERSECTION_SIZE / 2);
+        drawStripedLine(g, centerX, 0, centerX, centerY - INTERSECTION_SIZE / 2);
 
         // South road
         g.fillRect(centerX - ROAD_WIDTH / 2, centerY + INTERSECTION_SIZE / 2, ROAD_WIDTH,
                 getHeight() - (centerY + INTERSECTION_SIZE / 2));
+        drawStripedLine(g, centerX, centerY + INTERSECTION_SIZE / 2, centerX, getHeight());
 
         // East road
         g.fillRect(centerX + INTERSECTION_SIZE / 2, centerY - ROAD_WIDTH / 2,
                 getWidth() - (centerX + INTERSECTION_SIZE / 2), ROAD_WIDTH);
+        drawStripedLine(g, centerX + INTERSECTION_SIZE / 2, centerY, getWidth(), centerY);
 
         // West road
         g.fillRect(0, centerY - ROAD_WIDTH / 2, centerX - INTERSECTION_SIZE / 2, ROAD_WIDTH);
+        drawStripedLine(g, 0, centerY, centerX - INTERSECTION_SIZE / 2, centerY);
+    }
+
+    private void drawStripedLine(Graphics2D g, int x1, int y1, int x2, int y2) {
+        Stroke previous = g.getStroke();
+        Color previousColor = g.getColor();
+        g.setColor(Color.WHITE);
+        g.setStroke(new BasicStroke(4, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{15f, 12f}, 0));
+        g.drawLine(x1, y1, x2, y2);
+        g.setStroke(previous);
+        g.setColor(previousColor);
     }
 
     private void drawIntersection(Graphics2D g) {
@@ -124,36 +139,49 @@ public class CrossroadCanvas extends JPanel {
     private void drawVehicles(Graphics2D g) {
         Map<String, java.util.List<Vehicle>> vehiclesByDir = groupVehiclesByDirection(vehicles);
 
-        drawVehiclesForDirection(g, vehiclesByDir, "North", true, false);
-        drawVehiclesForDirection(g, vehiclesByDir, "South", true, true);
-        drawVehiclesForDirection(g, vehiclesByDir, "East", false, true);
-        drawVehiclesForDirection(g, vehiclesByDir, "West", false, false);
+        drawVehiclesForDirection(g, vehiclesByDir, "North");
+        drawVehiclesForDirection(g, vehiclesByDir, "South");
+        drawVehiclesForDirection(g, vehiclesByDir, "East");
+        drawVehiclesForDirection(g, vehiclesByDir, "West");
     }
 
     private void drawVehiclesForDirection(Graphics2D g, Map<String, java.util.List<Vehicle>> vehiclesByDir,
-                                         String direction, boolean isVertical, boolean isReversed) {
+                                          String direction) {
         java.util.List<Vehicle> dirVehicles = vehiclesByDir.getOrDefault(direction, new java.util.ArrayList<>());
 
-        for (Vehicle v : dirVehicles) {
-            double pos = v.getPosition();
-            int x, y;
+        double normalizedRange = Vehicle.getPathLength();
+        double start = Vehicle.getStartPosition();
 
-            if (isVertical) {
-                if (direction.equals("North")) {
-                    y = (int) (centerY - (pos / 100.0) * (centerY - INTERSECTION_SIZE / 2 + 50));
-                    x = centerX - VEHICLE_WIDTH / 2;
-                } else {
-                    y = (int) (centerY + (pos / 100.0) * (getHeight() - centerY - INTERSECTION_SIZE / 2 - 50));
-                    x = centerX - VEHICLE_WIDTH / 2;
-                }
-            } else {
-                if (direction.equals("East")) {
-                    x = (int) (centerX + (pos / 100.0) * (getWidth() - centerX - INTERSECTION_SIZE / 2 - 50));
-                    y = centerY - VEHICLE_HEIGHT / 2;
-                } else {
-                    x = (int) (centerX - (pos / 100.0) * (centerX - INTERSECTION_SIZE / 2 + 50));
-                    y = centerY - VEHICLE_HEIGHT / 2;
-                }
+        for (Vehicle v : dirVehicles) {
+            double normalized = (v.getPosition() - start) / normalizedRange;
+            normalized = Math.max(0.0, Math.min(1.0, normalized));
+            int x;
+            int y;
+
+            if (direction.equals("North")) {
+                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double travelPixels = getHeight() + 2.0 * EDGE_BUFFER;
+                double startY = -EDGE_BUFFER;
+                y = (int) Math.round(startY + normalized * travelPixels);
+                x = (int) Math.round(laneCenter - VEHICLE_WIDTH / 2.0);
+            } else if (direction.equals("South")) {
+                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double travelPixels = getHeight() + 2.0 * EDGE_BUFFER;
+                double startY = getHeight() + EDGE_BUFFER;
+                y = (int) Math.round(startY - normalized * travelPixels);
+                x = (int) Math.round(laneCenter - VEHICLE_WIDTH / 2.0);
+            } else if (direction.equals("East")) {
+                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double travelPixels = getWidth() + 2.0 * EDGE_BUFFER;
+                double startX = getWidth() + EDGE_BUFFER;
+                x = (int) Math.round(startX - normalized * travelPixels);
+                y = (int) Math.round(laneCenter - VEHICLE_HEIGHT / 2.0);
+            } else { // West
+                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double travelPixels = getWidth() + 2.0 * EDGE_BUFFER;
+                double startX = -EDGE_BUFFER;
+                x = (int) Math.round(startX + normalized * travelPixels);
+                y = (int) Math.round(laneCenter - VEHICLE_HEIGHT / 2.0);
             }
 
             g.setColor(Color.BLUE);
@@ -169,8 +197,19 @@ public class CrossroadCanvas extends JPanel {
         }
     }
 
+    private double getPerpendicularCenter(String direction, int lane) {
+        double offset = lane == 0 ? -ROAD_WIDTH / 12.0 : ROAD_WIDTH / 12.0;
+        return switch (direction) {
+            case "North" -> centerX - ROAD_WIDTH / 4.0 + offset; // stay on left half
+            case "South" -> centerX + ROAD_WIDTH / 4.0 + offset; // stay on right half
+            case "East" -> centerY - ROAD_WIDTH / 4.0 + offset;  // stay on upper half
+            case "West" -> centerY + ROAD_WIDTH / 4.0 + offset;  // stay on lower half
+            default -> centerX;
+        };
+    }
+
     private void drawLabels(Graphics2D g) {
-        g.setColor(Color.BLACK);
+        g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 14));
 
         g.drawString("NORTH", centerX - 30, 20);
