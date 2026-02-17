@@ -19,14 +19,17 @@ This project provides a foundational environment for experimenting with traffic-
 
 ```
 src/main/java/com/example/
-├── App.java                    # Main entry point; runs simulation demo
+├── App.java                    # Main entry point; launches Swing UI
 ├── traffic/
 │   ├── Vehicle.java            # Represents a vehicle
 │   └── TrafficGenerator.java    # Generates and moves vehicles
 ├── controller/
 │   └── TrafficLightController.java  # Manages traffic light states
-└── viz/
-    └── SimulationVisualizer.java    # Renders simulation state
+├── viz/
+│   └── SimulationVisualizer.java    # Text-based console visualization
+└── ui/
+    ├── CrossroadVisualizer.java     # Main Swing window (JFrame)
+    └── CrossroadCanvas.java         # Canvas rendering (JPanel with Graphics2D)
 
 src/test/java/com/example/
 ├── traffic/
@@ -37,6 +40,24 @@ src/test/java/com/example/
 └── viz/
     └── SimulationVisualizerTest.java
 ```
+
+## Features
+
+### Simulation Engine
+- Vehicle generation with random arrivals and directions
+- Clock-driven traffic light controller (fixed schedule)
+- Vehicle movement and intersection logic
+
+### Visualization (`ui` package - NEW)
+- **Swing-based GUI** displaying the crossroad in real-time
+- Vehicles rendered as blue rectangles moving on road approaches
+- Traffic lights shown as colored circles (green/red/yellow)
+- Statistics panel showing:
+  - Current vehicle count
+  - Cycle time progress
+  - Individual light states per direction
+- Smooth 20 FPS animation
+- Simple traffic logic: vehicles stop at red lights, move on green
 
 ## Requirements
 
@@ -51,23 +72,30 @@ src/test/java/com/example/
 .\gradlew build
 ```
 
-### Run the simulation
+### Run the Swing UI (recommended)
 
 ```powershell
 .\gradlew run
 ```
 
-This runs a 10-step simulation showing:
-- Vehicle generation from each direction
-- Traffic light state transitions (North/South → East/West → repeat)
-- Vehicle movement along each approach
-- Real-time visualization of the crossroad state
+This launches an interactive window showing:
+- The crossroad intersection with four road approaches
+- Real-time vehicle movement 
+- Traffic light states for each direction
+- Live statistics panel
+- Vehicles automatically stop/go based on signal state
 
 ### Run tests
 
 ```powershell
 .\gradlew test
 ```
+
+Tests verify:
+- Vehicle position and movement
+- Traffic light phase transitions
+- Traffic generator creation and updates
+- Simulation visualization
 
 
 
