@@ -12,6 +12,7 @@ public class CrossroadVisualizer extends JFrame {
     private static final int WINDOW_WIDTH = 900;
     private static final int WINDOW_HEIGHT = 800;
     private static final double MIN_VEHICLE_GAP = 25.0;
+    private static final double STOP_LINE_PIXEL_OFFSET = CrossroadCanvas.STOP_LINE_PIXEL_OFFSET;
 
     private TrafficGenerator generator;
     private TrafficLightController controller;
@@ -55,7 +56,6 @@ public class CrossroadVisualizer extends JFrame {
         panel.setBackground(new Color(240, 240, 240));
         panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY));
         panel.setPreferredSize(new Dimension(0, 70));
-
         statsLabel = new JLabel("Vehicles: 0 | Cycle: 0/0 | Lights: [N: RED] [S: RED] [E: RED] [W: RED]");
         statsLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         statsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -109,24 +109,40 @@ public class CrossroadVisualizer extends JFrame {
             byDirection.computeIfAbsent(vehicle.getDirection(), k -> new java.util.ArrayList<>()).add(vehicle);
         }
 
+        double verticalStopLineBuffer = computeStopLineBuffer(true);
+        double horizontalStopLineBuffer = computeStopLineBuffer(false);
+        double verticalVehicleBuffer = computeVehicleLengthBuffer(true);
+        double horizontalVehicleBuffer = computeVehicleLengthBuffer(false);
+
         for (var entry : byDirection.entrySet()) {
+            String direction = entry.getKey();
             var dirVehicles = entry.getValue();
             dirVehicles.sort(java.util.Comparator.comparingDouble(com.example.traffic.Vehicle::getPosition).reversed());
 
+            double stopLineBuffer = isVerticalDirection(direction) ? verticalStopLineBuffer : horizontalStopLineBuffer;
+            double vehicleLengthBuffer = isVerticalDirection(direction) ? verticalVehicleBuffer : horizontalVehicleBuffer;
+            double stopLinePosition = com.example.traffic.Vehicle.getIntersectionStart() - stopLineBuffer;
+            if (requiresFrontOffset(direction)) {
+                stopLinePosition -= vehicleLengthBuffer;
+            }
+
             com.example.traffic.Vehicle previous = null;
             for (var vehicle : dirVehicles) {
-                boolean beforeIntersection = vehicle.getPosition() < com.example.traffic.Vehicle.getIntersectionStart();
-                boolean inIntersection = vehicle.getPosition() >= com.example.traffic.Vehicle.getIntersectionStart()
-                        && vehicle.getPosition() <= com.example.traffic.Vehicle.getIntersectionEnd();
+                double position = vehicle.getPosition();
+                double intersectionStart = com.example.traffic.Vehicle.getIntersectionStart();
+                double intersectionEnd = com.example.traffic.Vehicle.getIntersectionEnd();
+                boolean beforeIntersection = position < intersectionStart;
+                boolean inIntersection = position >= intersectionStart && position <= intersectionEnd;
+                boolean nearStopLine = beforeIntersection && position >= stopLinePosition;
                 boolean vehicleAhead = previous != null && (previous.getPosition() - vehicle.getPosition()) < MIN_VEHICLE_GAP;
 
                 TrafficLightController.LightState light = controller.getLight(vehicle.getDirection());
                 boolean shouldStop;
                 if (vehicleAhead && beforeIntersection) {
                     shouldStop = true;
-                } else if (light == TrafficLightController.LightState.RED && beforeIntersection) {
+                } else if (light == TrafficLightController.LightState.RED && nearStopLine) {
                     shouldStop = true;
-                } else if (light == TrafficLightController.LightState.YELLOW && beforeIntersection) {
+                } else if (light == TrafficLightController.LightState.YELLOW && nearStopLine) {
                     shouldStop = true;
                 } else {
                     shouldStop = false;
@@ -137,9 +153,48 @@ public class CrossroadVisualizer extends JFrame {
                 }
 
                 vehicle.setStopped(shouldStop);
+
+                if (shouldStop && beforeIntersection) {
+                    double permittedPosition = stopLinePosition;
+                    if (previous != null) {
+                        permittedPosition = Math.min(permittedPosition, previous.getPosition() - MIN_VEHICLE_GAP);
+                    }
+                    if (vehicle.getPosition() > permittedPosition) {
+                        vehicle.setPosition(permittedPosition);
+                    }
+                }
                 previous = vehicle;
             }
         }
+    }
+
+    private double computeStopLineBuffer(boolean vertical) {
+        double dimension = vertical ? canvas.getHeight() : canvas.getWidth();
+        if (dimension <= 0) {
+            dimension = vertical ? CrossroadCanvas.PREFERRED_HEIGHT : CrossroadCanvas.PREFERRED_WIDTH;
+        }
+        double approachPixels = dimension / 2.0 - CrossroadCanvas.ROAD_WIDTH / 2.0 + CrossroadCanvas.EDGE_BUFFER;
+        double approachDistance = com.example.traffic.Vehicle.APPROACH_DISTANCE;
+        return approachDistance * (STOP_LINE_PIXEL_OFFSET / approachPixels);
+    }
+
+    private double computeVehicleLengthBuffer(boolean vertical) {
+        double dimension = vertical ? canvas.getHeight() : canvas.getWidth();
+        if (dimension <= 0) {
+            dimension = vertical ? CrossroadCanvas.PREFERRED_HEIGHT : CrossroadCanvas.PREFERRED_WIDTH;
+        }
+        double approachPixels = dimension / 2.0 - CrossroadCanvas.ROAD_WIDTH / 2.0 + CrossroadCanvas.EDGE_BUFFER;
+        double approachDistance = com.example.traffic.Vehicle.APPROACH_DISTANCE;
+        double vehiclePixels = vertical ? CrossroadCanvas.VEHICLE_HEIGHT : CrossroadCanvas.VEHICLE_WIDTH;
+        return approachDistance * (vehiclePixels / approachPixels);
+    }
+
+    private boolean isVerticalDirection(String direction) {
+        return "North".equals(direction) || "South".equals(direction);
+    }
+
+    private boolean requiresFrontOffset(String direction) {
+        return "North".equals(direction) || "West".equals(direction);
     }
 
     public static void main(String[] args) {

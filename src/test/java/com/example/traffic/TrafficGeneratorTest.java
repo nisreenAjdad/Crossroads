@@ -30,12 +30,12 @@ public class TrafficGeneratorTest {
         
         if (!vehicles.isEmpty()) {
             Vehicle v = vehicles.get(0);
-            double initialPos = 50;
+            double initialPos = Vehicle.getStartPosition() + 10.0; // still on the approach
             v.setPosition(initialPos);
 
             gen.updateVehicles();
-            // Vehicle should move forward by 2.0 units per tick
-            assertEquals(initialPos + 2.0, v.getPosition(), 0.01);
+            assertEquals(initialPos + TrafficGenerator.BASE_SPEED_PER_TICK,
+                    v.getPosition(), 0.01);
         }
     }
 
@@ -52,6 +52,44 @@ public class TrafficGeneratorTest {
 
             gen.updateVehicles();
             assertEquals(30.0, v.getPosition());
+        }
+    }
+
+    @Test
+    void vehiclesAccelerateInsideIntersection() {
+        TrafficGenerator gen = new TrafficGenerator(0.0);
+        gen.setGenerationRate(10.0);
+        gen.generateVehicles();
+        List<Vehicle> vehicles = gen.getVehicles();
+
+        if (!vehicles.isEmpty()) {
+            Vehicle v = vehicles.get(0);
+            double initialPos = Vehicle.getIntersectionStart() + 10.0;
+            v.setPosition(initialPos);
+
+            gen.updateVehicles();
+            double expected = initialPos + TrafficGenerator.BASE_SPEED_PER_TICK *
+                    TrafficGenerator.INTERSECTION_SPEED_MULTIPLIER;
+            assertEquals(expected, v.getPosition(), 0.01);
+        }
+    }
+
+    @Test
+    void vehiclesMaintainBoostAfterIntersection() {
+        TrafficGenerator gen = new TrafficGenerator(0.0);
+        gen.setGenerationRate(10.0);
+        gen.generateVehicles();
+        List<Vehicle> vehicles = gen.getVehicles();
+
+        if (!vehicles.isEmpty()) {
+            Vehicle v = vehicles.get(0);
+            double initialPos = Vehicle.getIntersectionEnd() + 5.0;
+            v.setPosition(initialPos);
+
+            gen.updateVehicles();
+            double expected = initialPos + TrafficGenerator.BASE_SPEED_PER_TICK *
+                    TrafficGenerator.INTERSECTION_SPEED_MULTIPLIER;
+            assertEquals(expected, v.getPosition(), 0.01);
         }
     }
 }

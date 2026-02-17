@@ -14,7 +14,9 @@ public class TrafficGenerator {
     private final String[] directions = {"North", "South", "East", "West"};
     private double generationRate; // vehicles per time unit
     private static final int MAX_VEHICLES_PER_DIRECTION = 8;
-    private static final int MAX_TOTAL_VEHICLES = 30;
+    private static final int MAX_TOTAL_VEHICLES = 10;
+    static final double BASE_SPEED_PER_TICK = 2.0;
+    static final double INTERSECTION_SPEED_MULTIPLIER = 1.75;
 
     public TrafficGenerator(double generationRate) {
         this.random = new Random();
@@ -50,14 +52,19 @@ public class TrafficGenerator {
 
     /**
      * Update vehicle positions (move them closer to the intersection and through it).
-     * Vehicles move slowly for realistic behavior (0.5 per frame).
-     * Position: -50 to 0 = off-screen approach, 0-70 = approach, 70-100 = at intersection, >100 = exited
+     * Vehicles move at a steady approach speed and accelerate slightly inside the
+     * intersection to keep traffic flowing.
      */
     public void updateVehicles() {
-        final double speedPerTick = 2.0; // pixels per frame (~20 px/sec)
+        final double intersectionStart = Vehicle.getIntersectionStart();
         for (Vehicle v : vehicles) {
             if (!v.isStopped()) {
-                v.setPosition(v.getPosition() + speedPerTick); // move forward at realistic pace
+                double speed = BASE_SPEED_PER_TICK;
+                double position = v.getPosition();
+                if (position >= intersectionStart) {
+                    speed *= INTERSECTION_SPEED_MULTIPLIER; // keep higher pace once crossing begins
+                }
+                v.setPosition(position + speed);
             }
         }
         // Remove vehicles that have passed through the intersection completely
