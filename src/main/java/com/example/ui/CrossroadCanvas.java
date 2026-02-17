@@ -19,6 +19,7 @@ public class CrossroadCanvas extends JPanel {
     private static final int VEHICLE_HEIGHT = 20;
     private static final int LIGHT_RADIUS = 15;
     private static final int EDGE_BUFFER = 200;
+    private static final Color GRASS_COLOR = new Color(66, 140, 66);
 
     private List<Vehicle> vehicles;
     private TrafficLightController controller;
@@ -51,11 +52,27 @@ public class CrossroadCanvas extends JPanel {
         centerX = getWidth() / 2;
         centerY = getHeight() / 2;
 
+        drawGrass(g2d);
         drawRoads(g2d);
         drawIntersection(g2d);
         drawTrafficLights(g2d);
         drawVehicles(g2d);
         drawLabels(g2d);
+    }
+
+    private void drawGrass(Graphics2D g) {
+        g.setColor(GRASS_COLOR);
+        int halfRoad = ROAD_WIDTH / 2;
+
+        // Top-left
+        g.fillRect(0, 0, centerX - halfRoad, centerY - halfRoad);
+        // Top-right
+        g.fillRect(centerX + halfRoad, 0, getWidth() - (centerX + halfRoad), centerY - halfRoad);
+        // Bottom-left
+        g.fillRect(0, centerY + halfRoad, centerX - halfRoad, getHeight() - (centerY + halfRoad));
+        // Bottom-right
+        g.fillRect(centerX + halfRoad, centerY + halfRoad, getWidth() - (centerX + halfRoad),
+                getHeight() - (centerY + halfRoad));
     }
 
     private void drawRoads(Graphics2D g) {
@@ -159,25 +176,25 @@ public class CrossroadCanvas extends JPanel {
             int y;
 
             if (direction.equals("North")) {
-                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double laneCenter = getPerpendicularCenter(direction);
                 double travelPixels = getHeight() + 2.0 * EDGE_BUFFER;
                 double startY = -EDGE_BUFFER;
                 y = (int) Math.round(startY + normalized * travelPixels);
                 x = (int) Math.round(laneCenter - VEHICLE_WIDTH / 2.0);
             } else if (direction.equals("South")) {
-                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double laneCenter = getPerpendicularCenter(direction);
                 double travelPixels = getHeight() + 2.0 * EDGE_BUFFER;
                 double startY = getHeight() + EDGE_BUFFER;
                 y = (int) Math.round(startY - normalized * travelPixels);
                 x = (int) Math.round(laneCenter - VEHICLE_WIDTH / 2.0);
             } else if (direction.equals("East")) {
-                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double laneCenter = getPerpendicularCenter(direction);
                 double travelPixels = getWidth() + 2.0 * EDGE_BUFFER;
                 double startX = getWidth() + EDGE_BUFFER;
                 x = (int) Math.round(startX - normalized * travelPixels);
                 y = (int) Math.round(laneCenter - VEHICLE_HEIGHT / 2.0);
             } else { // West
-                double laneCenter = getPerpendicularCenter(direction, v.getLane());
+                double laneCenter = getPerpendicularCenter(direction);
                 double travelPixels = getWidth() + 2.0 * EDGE_BUFFER;
                 double startX = -EDGE_BUFFER;
                 x = (int) Math.round(startX + normalized * travelPixels);
@@ -197,13 +214,12 @@ public class CrossroadCanvas extends JPanel {
         }
     }
 
-    private double getPerpendicularCenter(String direction, int lane) {
-        double offset = lane == 0 ? -ROAD_WIDTH / 12.0 : ROAD_WIDTH / 12.0;
+    private double getPerpendicularCenter(String direction) {
         return switch (direction) {
-            case "North" -> centerX - ROAD_WIDTH / 4.0 + offset; // stay on left half
-            case "South" -> centerX + ROAD_WIDTH / 4.0 + offset; // stay on right half
-            case "East" -> centerY - ROAD_WIDTH / 4.0 + offset;  // stay on upper half
-            case "West" -> centerY + ROAD_WIDTH / 4.0 + offset;  // stay on lower half
+            case "North" -> centerX - ROAD_WIDTH / 4.0; // stay on left half
+            case "South" -> centerX + ROAD_WIDTH / 4.0; // stay on right half
+            case "East" -> centerY - ROAD_WIDTH / 4.0;  // stay on upper half
+            case "West" -> centerY + ROAD_WIDTH / 4.0;  // stay on lower half
             default -> centerX;
         };
     }
@@ -212,10 +228,10 @@ public class CrossroadCanvas extends JPanel {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 14));
 
-        g.drawString("NORTH", centerX - 30, 20);
-        g.drawString("SOUTH", centerX - 30, getHeight() - 10);
-        g.drawString("EAST", getWidth() - 60, centerY + 10);
-        g.drawString("WEST", 10, centerY + 10);
+        g.drawString("NORTH", centerX - ROAD_WIDTH / 2 - 70, 20);
+        g.drawString("SOUTH", centerX + ROAD_WIDTH / 2 + 10, getHeight() - 1);
+        g.drawString("EAST", getWidth() - 60, centerY - ROAD_WIDTH / 2 - 10);
+        g.drawString("WEST", 10,centerY + ROAD_WIDTH / 2 + 25);
     }
 
     private Map<String, java.util.List<Vehicle>> groupVehiclesByDirection(List<Vehicle> vehicles) {

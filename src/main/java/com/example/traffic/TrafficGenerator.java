@@ -13,7 +13,7 @@ public class TrafficGenerator {
     private final List<Vehicle> vehicles;
     private final String[] directions = {"North", "South", "East", "West"};
     private double generationRate; // vehicles per time unit
-    private static final int MAX_VEHICLES_PER_LANE = 5;
+    private static final int MAX_VEHICLES_PER_DIRECTION = 8;
     private static final int MAX_TOTAL_VEHICLES = 30;
 
     public TrafficGenerator(double generationRate) {
@@ -38,11 +38,10 @@ public class TrafficGenerator {
                 break;
             }
             String direction = directions[random.nextInt(directions.length)];
-            int lane = random.nextInt(2);
-            if (!canSpawn(direction, lane)) {
+            if (!canSpawn(direction)) {
                 continue;
             }
-            Vehicle v = new Vehicle(direction, lane);
+            Vehicle v = new Vehicle(direction);
             vehicles.add(v);
             newVehicles.add(v);
         }
@@ -65,11 +64,11 @@ public class TrafficGenerator {
         vehicles.removeIf(v -> v.getPosition() >= Vehicle.getEndPosition());
     }
 
-    private boolean canSpawn(String direction, int lane) {
+    private boolean canSpawn(String direction) {
         long count = vehicles.stream()
-                .filter(v -> v.getDirection().equals(direction) && v.getLane() == lane)
+                .filter(v -> v.getDirection().equals(direction))
                 .count();
-        return count < MAX_VEHICLES_PER_LANE;
+        return count < MAX_VEHICLES_PER_DIRECTION;
     }
 
     public List<Vehicle> getVehicles() {

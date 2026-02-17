@@ -100,19 +100,16 @@ public class CrossroadVisualizer extends JFrame {
     }
 
     private void applyTrafficRules(java.util.List<com.example.traffic.Vehicle> vehiclesSnapshot) {
-        java.util.Map<String, java.util.List<com.example.traffic.Vehicle>> byDirectionLane = new java.util.HashMap<>();
+        java.util.Map<String, java.util.List<com.example.traffic.Vehicle>> byDirection = new java.util.HashMap<>();
         for (String dir : new String[]{"North", "South", "East", "West"}) {
-            for (int lane = 0; lane < 2; lane++) {
-                byDirectionLane.put(dir + "-" + lane, new java.util.ArrayList<>());
-            }
+            byDirection.put(dir, new java.util.ArrayList<>());
         }
 
         for (var vehicle : vehiclesSnapshot) {
-            String key = vehicle.getDirection() + "-" + vehicle.getLane();
-            byDirectionLane.computeIfAbsent(key, k -> new java.util.ArrayList<>()).add(vehicle);
+            byDirection.computeIfAbsent(vehicle.getDirection(), k -> new java.util.ArrayList<>()).add(vehicle);
         }
 
-        for (var entry : byDirectionLane.entrySet()) {
+        for (var entry : byDirection.entrySet()) {
             var dirVehicles = entry.getValue();
             dirVehicles.sort(java.util.Comparator.comparingDouble(com.example.traffic.Vehicle::getPosition).reversed());
 
